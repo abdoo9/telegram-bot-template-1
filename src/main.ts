@@ -6,6 +6,7 @@ import { createServer } from "~/server";
 import { prisma } from "~/prisma";
 import { config } from "~/config";
 import { logger } from "~/logger";
+import { startWorkers, stopWorkers } from "~/workers";
 
 async function main() {
   const bot = createBot(config.BOT_TOKEN);
@@ -19,11 +20,13 @@ async function main() {
   prisma.$on("beforeExit", async () => {
     logger.info("shutdown");
 
+    await stopWorkers();
     await bot.stop();
     await server.close();
   });
 
   await prisma.$connect();
+  startWorkers(bot);
 
   if (config.isProd) {
     await server.listen({
